@@ -167,7 +167,7 @@ function renderScore(): void {
     const score = document.createElement('div');
     score.className = 'score';
     const key = document.createElement('span');
-    key.className = 'score-key';
+    key.className = 'score-key kicker';
     key.textContent = it.key;
     const val = document.createElement('span');
     val.className = 'score-val';
@@ -231,7 +231,7 @@ function renderQuestion(): void {
   const q = current;
 
   const label = document.createElement('p');
-  label.className = 'q-label';
+  label.className = 'q-label kicker';
   label.textContent = Q_LABEL[q.kind];
   questionBox.append(label);
 
@@ -325,7 +325,7 @@ function answer(idx: number, btn: HTMLButtonElement): void {
   const origin = document.createElement('div');
   origin.className = 'origin';
   const originLabel = document.createElement('span');
-  originLabel.className = 'origin-label';
+  originLabel.className = 'origin-label kicker';
   originLabel.textContent = originLabels[q.idiom.origin];
   const originNote = document.createElement('p');
   originNote.className = 'origin-note';
@@ -372,7 +372,7 @@ function renderDict(): void {
     reading.className = 'entry-reading';
     reading.textContent = i.reading;
     const badge = document.createElement('span');
-    badge.className = 'entry-badge';
+    badge.className = 'entry-badge kicker';
     badge.textContent = originLabels[i.origin];
     head.append(word, reading, badge);
 
