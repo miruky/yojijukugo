@@ -3,6 +3,7 @@ import {
   accuracy,
   buildQuestion,
   createRng,
+  emptyProgress,
   idioms,
   originLabels,
   rebuildFromId,
@@ -10,11 +11,13 @@ import {
   restoreProgress,
   weakIds,
 } from './lib';
-import type { Progress, Question, QuestionKind } from './lib';
+import type { Origin, Progress, Question, QuestionKind } from './lib';
 import { applyTheme, loadTheme, nextTheme, THEME_LABEL } from './theme';
 import type { ThemeMode } from './theme';
 import { arrowRight, check, cross, github, logo, search } from './icons';
 import { countTo, initMotion, revealFeedback, revealQuestion } from './motion';
+import { formatHash, parseHash } from './url';
+import { parseQuizKey } from './keys';
 
 const STORE_KEY = 'yojijukugo:progress';
 const MASK = '〇';
@@ -36,6 +39,7 @@ const Q_LABEL: Record<QuestionKind, string> = {
 };
 
 const THEME_GLYPH: Record<ThemeMode, string> = { auto: '自', light: '明', dark: '暗' };
+const ORIGINS: Origin[] = ['kanseki', 'bukkyo', 'nihon', 'general'];
 
 function mustFind<T extends Element>(selector: string): T {
   const el = document.querySelector<T>(selector);
@@ -70,6 +74,7 @@ app.innerHTML = `
     <section class="quiz" id="quiz" aria-label="出題">
       <div class="scoreline" id="scoreline" aria-label="成績"></div>
       <div class="question" id="question" aria-live="polite"></div>
+      <p class="kbd-hint" aria-hidden="true">1〜4キーで解答、Enterで次の問題へ</p>
     </section>
     <section class="dict" id="dict" hidden aria-label="辞典">
       <div class="dict-toolbar">
@@ -80,12 +85,18 @@ app.innerHTML = `
         </div>
         <span class="dict-count" id="dict-count"></span>
       </div>
+      <div class="dict-filters" id="dict-filters" role="group" aria-label="由来でしぼり込む"></div>
       <ul class="dict-list" id="dict-list"></ul>
     </section>
   </main>
   <footer class="site-footer">
-    <span>成績はこのブラウザのlocalStorageにだけ保存される</span>
-    <span>${idioms.length}語収録 / MIT License</span>
+    <div class="data-actions">
+      <button type="button" class="link-btn" id="export-btn">成績を書き出す</button>
+      <button type="button" class="link-btn" id="import-btn">読み込む</button>
+      <button type="button" class="link-btn" id="reset-btn">消す</button>
+      <input type="file" id="import-file" accept="application/json,.json" hidden />
+    </div>
+    <span class="foot-note">成績はこの端末にだけ保存 / ${idioms.length}語収録 / MIT License</span>
   </footer>
 `;
 
@@ -97,10 +108,13 @@ const questionBox = mustFind<HTMLDivElement>('#question');
 const dictSearch = mustFind<HTMLInputElement>('#dict-search');
 const dictList = mustFind<HTMLUListElement>('#dict-list');
 const dictCount = mustFind<HTMLSpanElement>('#dict-count');
+const dictFilters = mustFind<HTMLDivElement>('#dict-filters');
 const themeToggle = mustFind<HTMLButtonElement>('#theme-toggle');
+const importFile = mustFind<HTMLInputElement>('#import-file');
 
 let theme: ThemeMode = loadTheme();
 let tab: Tab = 'meaning';
+let dictOrigin: Origin | 'all' = 'all';
 let progress: Progress;
 try {
   progress = restoreProgress(localStorage.getItem(STORE_KEY));
@@ -149,9 +163,11 @@ function renderTabs(): void {
       btn.append(count);
     }
     btn.addEventListener('click', () => {
+      if (tab === t.key) return;
       tab = t.key;
       renderTabs();
       renderStage();
+      syncHash();
     });
     tabsBar.append(btn);
   }
@@ -363,18 +379,39 @@ function answer(idx: number, btn: HTMLButtonElement): void {
   next.focus();
 }
 
+function renderDictFilters(): void {
+  dictFilters.textContent = '';
+  const addChip = (key: Origin | 'all', label: string): void => {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'chip kicker';
+    chip.setAttribute('aria-pressed', String(dictOrigin === key));
+    chip.textContent = label;
+    chip.addEventListener('click', () => {
+      dictOrigin = key;
+      renderDictFilters();
+      renderDict();
+    });
+    dictFilters.append(chip);
+  };
+  addChip('all', 'すべて');
+  for (const o of ORIGINS) addChip(o, originLabels[o]);
+}
+
 function renderDict(): void {
   const term = dictSearch.value.trim();
-  const hits = idioms.filter(
-    (i) =>
-      term === '' ||
+  const hits = idioms.filter((i) => {
+    if (dictOrigin !== 'all' && i.origin !== dictOrigin) return false;
+    if (term === '') return true;
+    return (
       i.word.includes(term) ||
       i.reading.includes(term) ||
       i.meaning.includes(term) ||
-      i.originNote.includes(term),
-  );
+      i.originNote.includes(term)
+    );
+  });
   dictList.textContent = '';
-  hits.forEach((i) => {
+  for (const i of hits) {
     const li = document.createElement('li');
     li.className = 'dict-entry';
 
@@ -404,7 +441,13 @@ function renderDict(): void {
 
     li.append(head, bodyEl);
     dictList.append(li);
-  });
+  }
+  if (hits.length === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'empty';
+    empty.textContent = '当てはまる語がない。検索語や絞り込みを変える。';
+    dictList.append(empty);
+  }
   dictCount.textContent = `${hits.length}語`;
 }
 
@@ -413,6 +456,7 @@ function renderStage(): void {
   quizSection.hidden = isDict;
   dictSection.hidden = !isDict;
   if (isDict) {
+    renderDictFilters();
     renderDict();
     dictSearch.focus();
   } else {
@@ -420,9 +464,101 @@ function renderStage(): void {
   }
 }
 
-dictSearch.addEventListener('input', renderDict);
+// ── URLハッシュとの同期 ──
+
+function syncHash(): void {
+  const target = formatHash(tab, tab === 'dict' ? dictSearch.value : '');
+  if (location.hash !== target) history.replaceState(null, '', target);
+}
+
+function applyRouteFromHash(): void {
+  const route = parseHash(location.hash);
+  if (!route) return;
+  const sameTab = route.tab === tab;
+  const sameQuery = route.tab !== 'dict' || route.query === dictSearch.value;
+  if (sameTab && sameQuery) return;
+  tab = route.tab;
+  if (route.tab === 'dict') dictSearch.value = route.query;
+  renderTabs();
+  renderStage();
+}
+
+// ── キーボード操作 ──
+
+document.addEventListener('keydown', (e) => {
+  const el = e.target as HTMLElement | null;
+  if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (tab === 'dict' || !current) return;
+  const action = parseQuizKey(e.key, current.choices.length, answered);
+  if (!action) return;
+  e.preventDefault();
+  if (action.type === 'select') {
+    const btns = questionBox.querySelectorAll<HTMLButtonElement>('.choice');
+    const b = btns[action.index];
+    if (b) answer(action.index, b);
+  } else {
+    nextQuestion();
+  }
+});
+
+// ── 成績の書き出し・読み込み・消去 ──
+
+function exportProgress(): void {
+  const blob = new Blob([JSON.stringify(progress, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'yojijukugo-progress.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importProgress(file: File): void {
+  const reader = new FileReader();
+  reader.addEventListener('load', () => {
+    progress = restoreProgress(typeof reader.result === 'string' ? reader.result : null);
+    persist();
+    updateScore();
+    renderTabs();
+  });
+  reader.readAsText(file);
+}
+
+function resetProgress(): void {
+  if (!window.confirm('保存した成績と苦手リストを消す。よろしいか。')) return;
+  progress = emptyProgress();
+  persist();
+  updateScore();
+  renderTabs();
+}
+
+mustFind<HTMLButtonElement>('#export-btn').addEventListener('click', exportProgress);
+mustFind<HTMLButtonElement>('#import-btn').addEventListener('click', () => importFile.click());
+mustFind<HTMLButtonElement>('#reset-btn').addEventListener('click', resetProgress);
+importFile.addEventListener('change', () => {
+  const file = importFile.files?.[0];
+  if (file) importProgress(file);
+  importFile.value = '';
+});
+
+dictSearch.addEventListener('input', () => {
+  renderDict();
+  syncHash();
+});
+
+window.addEventListener('hashchange', applyRouteFromHash);
+
+// ── 起動 ──
+
+const initialRoute = parseHash(location.hash);
+if (initialRoute) {
+  tab = initialRoute.tab;
+  if (initialRoute.tab === 'dict') dictSearch.value = initialRoute.query;
+}
 
 renderThemeButton();
 buildScoreline();
 renderTabs();
 renderStage();
+syncHash();
