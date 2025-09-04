@@ -8,10 +8,19 @@
       content="出典の解説つきで四字熟語を覚えるクイズ。意味・読み・虫食いの3モードと苦手復習、検索できる辞典"
     />
     <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#f4f0e7" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#15140f" media="(prefers-color-scheme: dark)" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <title>yojijukugo | 四字熟語クイズ</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <title>四字熟語クイズ | yojijukugo</title>
   </head>
   <body>
+    <a class="skip-link" href="#stage">本文へ移動</a>
     <div id="app"></div>
     <noscript>このクイズはブラウザ内で動作するため、JavaScriptが必要です。</noscript>
     <script type="module" src="/src/main.ts"></script>
