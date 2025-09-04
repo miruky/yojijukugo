@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { idioms } from './data/idioms';
+import { idioms, originLabels } from './data/idioms';
 
 describe('収録データの整合性', () => {
   it('語はすべて漢字4文字で重複がない', () => {
@@ -23,7 +23,19 @@ describe('収録データの整合性', () => {
     }
   });
 
-  it('60語以上を収録している', () => {
-    expect(idioms.length).toBeGreaterThanOrEqual(60);
+  it('由来はすべて規定の4分類のいずれかで、表示ラベルがある', () => {
+    const labelled = new Set(Object.keys(originLabels));
+    for (const i of idioms) {
+      expect(labelled.has(i.origin)).toBe(true);
+    }
+    // どの分類にも最低限の語数があり、出題や絞り込みが成立する
+    for (const key of labelled) {
+      const count = idioms.filter((i) => i.origin === key).length;
+      expect(count).toBeGreaterThanOrEqual(4);
+    }
+  });
+
+  it('100語以上を収録している', () => {
+    expect(idioms.length).toBeGreaterThanOrEqual(100);
   });
 });
