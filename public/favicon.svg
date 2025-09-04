@@ -1,18 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" aria-hidden="true">
   <style>
-    .ink { stroke: #262230; }
+    .ink { stroke: #211f1a; }
+    .grid { stroke: #211f1a; opacity: 0.42; }
     @media (prefers-color-scheme: dark) {
-      .ink { stroke: #e9e6ef; }
+      .ink,
+      .grid {
+        stroke: #ece7d8;
+      }
     }
   </style>
-  <g class="ink" fill="none" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
-    <rect x="8" y="8" width="22" height="22" rx="4"/>
-    <rect x="34" y="8" width="22" height="22" rx="4"/>
-    <rect x="8" y="34" width="22" height="22" rx="4"/>
-  </g>
-  <g fill="none" stroke="#7a68c9" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
-    <rect x="34" y="34" width="22" height="22" rx="4"/>
-    <path d="M40 45h10"/>
-    <path d="M45 40v10"/>
-  </g>
+  <rect class="ink" x="7" y="7" width="50" height="50" rx="5" fill="none" stroke-width="3" />
+  <path class="grid" d="M32 8V56M8 32H56" stroke-width="2.4" />
+  <rect x="33" y="33" width="23" height="23" rx="3" fill="#5c4d97" opacity="0.18" />
+  <circle cx="44.5" cy="44.5" r="5.4" fill="#ad3a26" />
 </svg>

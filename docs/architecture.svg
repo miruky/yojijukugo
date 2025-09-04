@@ -1,59 +1,59 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 400" role="img" aria-label="yojijukugoのアーキテクチャ図">
   <title>yojijukugoのアーキテクチャ: 収録データから3種の出題・採点・苦手復習までの流れ</title>
   <style>
-    .box { fill: #fdfcfe; stroke: #ddd8e6; rx: 10; }
-    .zone { fill: #efecf3; stroke: #e1dde8; rx: 14; }
-    .t { font-family: 'Hiragino Sans','Noto Sans JP',system-ui,sans-serif; fill: #262230; }
+    .box { fill: #faf7ef; stroke: #d2c8b2; }
+    .zone { fill: #ece7da; stroke: #e3dccb; }
+    .t { font-family: 'Hiragino Sans','Noto Sans JP',system-ui,sans-serif; fill: #211f1a; }
     .h { font-size: 13px; font-weight: 600; }
-    .s { font-size: 11px; fill: #6e6878; }
-    .zl { font-size: 11px; font-weight: 600; fill: #5d4e9e; letter-spacing: 1px; }
-    .arrow { stroke: #6e6878; stroke-width: 1.6; fill: none; marker-end: url(#head); }
+    .s { font-size: 11px; fill: #585347; }
+    .zl { font-size: 11px; font-weight: 600; fill: #5c4d97; letter-spacing: 1.5px; }
+    .arrow { stroke: #585347; stroke-width: 1.6; fill: none; marker-end: url(#head); }
     @media (prefers-color-scheme: dark) {
-      .box { fill: #1f1c2a; stroke: #353043; }
-      .zone { fill: #19161f; stroke: #282435; }
-      .t { fill: #e9e6ef; }
-      .s { fill: #a39cb3; }
-      .zl { fill: #a394e8; }
-      .arrow { stroke: #a39cb3; }
+      .box { fill: #1b1a13; stroke: #3b3829; }
+      .zone { fill: #19180f; stroke: #2a2820; }
+      .t { fill: #ece7d8; }
+      .s { fill: #a8a18d; }
+      .zl { fill: #b6a7e6; }
+      .arrow { stroke: #a8a18d; }
     }
   </style>
   <defs>
     <marker id="head" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
-      <path d="M0 0 L7 4 L0 8 Z" fill="#6e6878"/>
+      <path d="M0 0 L7 4 L0 8 Z" fill="#585347"/>
     </marker>
   </defs>
 
-  <rect class="zone" x="20" y="20" width="740" height="92"/>
-  <text class="t zl" x="36" y="44">データ(src/lib/data)</text>
-  <rect class="box" x="36" y="56" width="708" height="44"/>
+  <rect class="zone" x="20" y="20" width="740" height="92" rx="12"/>
+  <text class="t zl" x="36" y="44">データ (src/lib/data)</text>
+  <rect class="box" x="36" y="56" width="708" height="44" rx="8"/>
   <text class="t h" x="52" y="76">idioms.ts</text>
   <text class="t s" x="52" y="92">68語の四字熟語。読み・意味・由来分類(漢籍/仏教/日本/漢語)・出典解説</text>
 
   <path class="arrow" d="M390 112 V140"/>
 
-  <rect class="zone" x="20" y="144" width="740" height="120"/>
-  <text class="t zl" x="36" y="168">出題エンジン(quiz.ts)</text>
-  <rect class="box" x="36" y="180" width="226" height="64"/>
+  <rect class="zone" x="20" y="144" width="740" height="120" rx="12"/>
+  <text class="t zl" x="36" y="168">出題エンジン (quiz.ts)</text>
+  <rect class="box" x="36" y="180" width="226" height="64" rx="8"/>
   <text class="t h" x="52" y="202">意味クイズ</text>
   <text class="t s" x="52" y="219">意味文から語を選ぶ4択。</text>
   <text class="t s" x="52" y="234">誤答は他の収録語から重複なく</text>
-  <rect class="box" x="278" y="180" width="226" height="64"/>
+  <rect class="box" x="278" y="180" width="226" height="64" rx="8"/>
   <text class="t h" x="294" y="202">読みクイズ</text>
   <text class="t s" x="294" y="219">語から読みを選ぶ4択。</text>
   <text class="t s" x="294" y="234">シード付き乱数で再現可能</text>
-  <rect class="box" x="520" y="180" width="224" height="64"/>
+  <rect class="box" x="520" y="180" width="224" height="64" rx="8"/>
   <text class="t h" x="536" y="202">虫食いクイズ</text>
   <text class="t s" x="536" y="219">1字を伏せて漢字を選ぶ。別の語が</text>
   <text class="t s" x="536" y="234">成立する漢字は誤答に使わない</text>
 
   <path class="arrow" d="M390 264 V292"/>
 
-  <rect class="zone" x="20" y="296" width="740" height="84"/>
-  <text class="t zl" x="36" y="320">採点と復習(progress.ts / main.ts)</text>
-  <rect class="box" x="36" y="330" width="344" height="40"/>
+  <rect class="zone" x="20" y="296" width="740" height="84" rx="12"/>
+  <text class="t zl" x="36" y="320">採点と復習 (progress.ts / main.ts)</text>
+  <rect class="box" x="36" y="330" width="344" height="40" rx="8"/>
   <text class="t h" x="52" y="350">成績</text>
   <text class="t s" x="120" y="350">正答率・連続正解をlocalStorageへ保存</text>
-  <rect class="box" x="400" y="330" width="344" height="40"/>
+  <rect class="box" x="400" y="330" width="344" height="40" rx="8"/>
   <text class="t h" x="416" y="350">苦手復習</text>
   <text class="t s" x="500" y="350">誤答した問題idから同じ問題を再構成して出題</text>
 </svg>

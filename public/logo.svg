@@ -1,13 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="yojijukugo-logo-title">
-  <title id="yojijukugo-logo-title">yojijukugo - 四つの枠のうち一つを問う出題を表すロゴ</title>
-  <g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-    <rect x="8" y="8" width="22" height="22" rx="4"/>
-    <rect x="34" y="8" width="22" height="22" rx="4"/>
-    <rect x="8" y="34" width="22" height="22" rx="4"/>
-  </g>
-  <g fill="none" stroke="var(--logo-accent, #5d4e9e)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-    <rect x="34" y="34" width="22" height="22" rx="4"/>
-    <path d="M40 45h10"/>
-    <path d="M45 40v10"/>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" role="img" aria-labelledby="yojijukugo-logo-title">
+  <title id="yojijukugo-logo-title">yojijukugo - 四字を表す升目のロゴ</title>
+  <rect x="5.5" y="5.5" width="37" height="37" rx="3" fill="none" stroke="currentColor" stroke-width="1.6" />
+  <path d="M24 6.5V41.5M6.5 24H41.5" stroke="currentColor" stroke-width="1.2" opacity="0.5" />
+  <rect x="25.5" y="25.5" width="15.5" height="15.5" rx="2" fill="var(--accent, #5c4d97)" opacity="0.16" />
+  <circle cx="33.2" cy="33.2" r="3.4" fill="var(--seal, #ad3a26)" />
 </svg>
