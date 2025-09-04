@@ -14,6 +14,7 @@ import type { Progress, Question, QuestionKind } from './lib';
 import { applyTheme, loadTheme, nextTheme, THEME_LABEL } from './theme';
 import type { ThemeMode } from './theme';
 import { arrowRight, check, cross, github, logo, search } from './icons';
+import { countTo, initMotion, revealFeedback, revealQuestion } from './motion';
 
 const STORE_KEY = 'yojijukugo:progress';
 const MASK = '〇';
@@ -43,6 +44,7 @@ function mustFind<T extends Element>(selector: string): T {
 }
 
 applyTheme(loadTheme());
+initMotion();
 
 const app = mustFind<HTMLDivElement>('#app');
 
@@ -155,32 +157,46 @@ function renderTabs(): void {
   }
 }
 
-function renderScore(): void {
-  const items: { key: string; val: string; unit?: string }[] = [
-    { key: '解答', val: String(progress.total) },
-    { key: '正答率', val: String(accuracy(progress)), unit: '%' },
-    { key: '連続', val: String(progress.streak) },
-    { key: '自己最高', val: String(progress.bestStreak) },
-  ];
+const SCORE_DEFS: { key: string; get: (p: Progress) => number; unit?: string }[] = [
+  { key: '解答', get: (p) => p.total },
+  { key: '正答率', get: (p) => accuracy(p), unit: '%' },
+  { key: '連続', get: (p) => p.streak },
+  { key: '自己最高', get: (p) => p.bestStreak },
+];
+const scoreNums: HTMLElement[] = [];
+
+function buildScoreline(): void {
   scoreline.textContent = '';
-  for (const it of items) {
+  scoreNums.length = 0;
+  for (const def of SCORE_DEFS) {
     const score = document.createElement('div');
     score.className = 'score';
     const key = document.createElement('span');
     key.className = 'score-key kicker';
-    key.textContent = it.key;
+    key.textContent = def.key;
     const val = document.createElement('span');
     val.className = 'score-val';
-    val.textContent = it.val;
-    if (it.unit) {
+    const num = document.createElement('span');
+    num.textContent = '0';
+    num.dataset.value = '0';
+    val.append(num);
+    if (def.unit) {
       const unit = document.createElement('span');
       unit.className = 'unit';
-      unit.textContent = it.unit;
+      unit.textContent = def.unit;
       val.append(unit);
     }
     score.append(key, val);
     scoreline.append(score);
+    scoreNums.push(num);
   }
+}
+
+function updateScore(): void {
+  SCORE_DEFS.forEach((def, i) => {
+    const el = scoreNums[i];
+    if (el) countTo(el, def.get(progress));
+  });
 }
 
 function nextQuestion(): void {
@@ -215,7 +231,7 @@ function renderKanjiFrame(word: string, maskChar?: string): HTMLDivElement {
 
 function renderQuestion(): void {
   questionBox.textContent = '';
-  renderScore();
+  updateScore();
 
   if (tab === 'review' && current === null) {
     const empty = document.createElement('p');
@@ -255,7 +271,6 @@ function renderQuestion(): void {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = `choice${isWord ? ' is-word' : ''}`;
-    btn.style.setProperty('--d', `${idx * 55}ms`);
     const index = document.createElement('span');
     index.className = 'choice-index';
     index.textContent = String(idx + 1);
@@ -268,6 +283,7 @@ function renderQuestion(): void {
     choices.append(btn);
   });
   questionBox.append(choices);
+  revealQuestion(questionBox);
 }
 
 function markIcon(kind: 'ok' | 'ng'): SVGElement {
@@ -285,7 +301,7 @@ function answer(idx: number, btn: HTMLButtonElement): void {
   const isCorrect = idx === q.answerIndex;
   progress = record(progress, q.id, isCorrect);
   persist();
-  renderScore();
+  updateScore();
   renderTabs();
 
   const buttons = questionBox.querySelectorAll<HTMLButtonElement>('.choice');
@@ -343,6 +359,7 @@ function answer(idx: number, btn: HTMLButtonElement): void {
 
   feedback.append(verdictRow, meaning, origin, nextRow);
   questionBox.append(feedback);
+  revealFeedback(feedback);
   next.focus();
 }
 
@@ -357,10 +374,9 @@ function renderDict(): void {
       i.originNote.includes(term),
   );
   dictList.textContent = '';
-  hits.forEach((i, idx) => {
+  hits.forEach((i) => {
     const li = document.createElement('li');
     li.className = 'dict-entry';
-    li.style.setProperty('--d', `${Math.min(idx, 12) * 28}ms`);
 
     const head = document.createElement('div');
     head.className = 'entry-head';
@@ -407,5 +423,6 @@ function renderStage(): void {
 dictSearch.addEventListener('input', renderDict);
 
 renderThemeButton();
+buildScoreline();
 renderTabs();
 renderStage();
