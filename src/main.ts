@@ -69,14 +69,15 @@ app.innerHTML = `
         aria-label="GitHubのソースコード">${github}</a>
     </div>
   </header>
+  <div class="sr-only" id="sr-status" role="status" aria-live="polite"></div>
   <nav class="tabs-bar" id="tabs" role="tablist" aria-label="出題モード"></nav>
   <main class="stage" id="stage" tabindex="-1">
-    <section class="quiz" id="quiz" aria-label="出題">
+    <section class="quiz" id="quiz" role="tabpanel" aria-label="出題">
       <div class="scoreline" id="scoreline" aria-label="成績"></div>
-      <div class="question" id="question" aria-live="polite"></div>
+      <div class="question" id="question"></div>
       <p class="kbd-hint" aria-hidden="true">1〜4キーで解答、Enterで次の問題へ</p>
     </section>
-    <section class="dict" id="dict" hidden aria-label="辞典">
+    <section class="dict" id="dict" role="tabpanel" hidden aria-label="辞典">
       <div class="dict-toolbar">
         <div class="dict-search">
           ${search}
@@ -111,6 +112,15 @@ const dictCount = mustFind<HTMLSpanElement>('#dict-count');
 const dictFilters = mustFind<HTMLDivElement>('#dict-filters');
 const themeToggle = mustFind<HTMLButtonElement>('#theme-toggle');
 const importFile = mustFind<HTMLInputElement>('#import-file');
+const srStatus = mustFind<HTMLElement>('#sr-status');
+
+// スクリーンリーダーに簡潔な状況を伝える。同じ文でも読み上げ直すため一度空にする。
+function announce(message: string): void {
+  srStatus.textContent = '';
+  requestAnimationFrame(() => {
+    srStatus.textContent = message;
+  });
+}
 
 let theme: ThemeMode = loadTheme();
 let tab: Tab = 'meaning';
@@ -145,6 +155,14 @@ themeToggle.addEventListener('click', () => {
   renderThemeButton();
 });
 
+function selectTab(key: Tab): void {
+  if (tab === key) return;
+  tab = key;
+  renderTabs();
+  renderStage();
+  syncHash();
+}
+
 function renderTabs(): void {
   tabsBar.textContent = '';
   for (const t of TABS) {
@@ -152,7 +170,9 @@ function renderTabs(): void {
     btn.type = 'button';
     btn.className = 'tab';
     btn.role = 'tab';
+    btn.tabIndex = tab === t.key ? 0 : -1;
     btn.setAttribute('aria-selected', String(tab === t.key));
+    btn.setAttribute('aria-controls', t.key === 'dict' ? 'dict' : 'quiz');
     const label = document.createElement('span');
     label.textContent = t.label;
     btn.append(label);
@@ -160,18 +180,33 @@ function renderTabs(): void {
       const count = document.createElement('span');
       count.className = 'tab-count';
       count.textContent = String(weakIds(progress).length);
+      count.setAttribute('aria-label', `苦手 ${weakIds(progress).length}件`);
       btn.append(count);
     }
-    btn.addEventListener('click', () => {
-      if (tab === t.key) return;
-      tab = t.key;
-      renderTabs();
-      renderStage();
-      syncHash();
-    });
+    btn.addEventListener('click', () => selectTab(t.key));
     tabsBar.append(btn);
   }
 }
+
+// タブリストは左右・Home・Endキーで移動し、移動先をそのまま選ぶ。
+tabsBar.addEventListener('keydown', (e) => {
+  const moves: Record<string, number | 'home' | 'end'> = {
+    ArrowLeft: -1,
+    ArrowRight: 1,
+    Home: 'home',
+    End: 'end',
+  };
+  const move = moves[e.key];
+  if (move === undefined) return;
+  e.preventDefault();
+  const cur = TABS.findIndex((t) => t.key === tab);
+  let next: number;
+  if (move === 'home') next = 0;
+  else if (move === 'end') next = TABS.length - 1;
+  else next = (cur + move + TABS.length) % TABS.length;
+  selectTab(TABS[next]!.key);
+  tabsBar.querySelectorAll<HTMLElement>('.tab')[next]?.focus();
+});
 
 const SCORE_DEFS: { key: string; get: (p: Progress) => number; unit?: string }[] = [
   { key: '解答', get: (p) => p.total },
@@ -215,7 +250,7 @@ function updateScore(): void {
   });
 }
 
-function nextQuestion(): void {
+function nextQuestion(focusFirst = false): void {
   answered = false;
   if (tab === 'review') {
     const ids = weakIds(progress);
@@ -225,6 +260,7 @@ function nextQuestion(): void {
     current = buildQuestion(tab, idioms, rng);
   }
   renderQuestion();
+  if (focusFirst) questionBox.querySelector<HTMLElement>('.choice')?.focus();
 }
 
 function renderKanjiFrame(word: string, maskChar?: string): HTMLDivElement {
@@ -257,6 +293,7 @@ function renderQuestion(): void {
         ? '苦手はまだない。まちがえた問題がここに積まれ、正解するまで再び出題される。'
         : '問題を組み立てられなかった。別のモードを試す。';
     questionBox.append(empty);
+    announce(empty.textContent);
     return;
   }
   if (!current) return;
@@ -275,6 +312,12 @@ function renderQuestion(): void {
     questionBox.append(prompt);
   } else {
     questionBox.append(renderKanjiFrame(q.prompt, q.kind === 'fill' ? MASK : undefined));
+    // 升目は装飾としてaria-hiddenなので、読み上げ用に問いの語を別に置く
+    const srPrompt = document.createElement('p');
+    srPrompt.className = 'sr-only';
+    srPrompt.lang = 'ja';
+    srPrompt.textContent = q.prompt;
+    questionBox.append(srPrompt);
   }
 
   const isKanji = q.kind === 'fill';
@@ -299,6 +342,7 @@ function renderQuestion(): void {
     choices.append(btn);
   });
   questionBox.append(choices);
+  announce(`${Q_LABEL[q.kind]}。${q.prompt}`);
   revealQuestion(questionBox);
 }
 
@@ -319,6 +363,7 @@ function answer(idx: number, btn: HTMLButtonElement): void {
   persist();
   updateScore();
   renderTabs();
+  announce(`${isCorrect ? '正解' : '不正解'}。${q.idiom.word}、${q.idiom.reading}。${q.idiom.meaning}`);
 
   const buttons = questionBox.querySelectorAll<HTMLButtonElement>('.choice');
   buttons.forEach((b, i) => {
@@ -370,7 +415,7 @@ function answer(idx: number, btn: HTMLButtonElement): void {
   next.type = 'button';
   next.className = 'next-btn';
   next.innerHTML = `<span>次の問題</span>${arrowRight}`;
-  next.addEventListener('click', nextQuestion);
+  next.addEventListener('click', () => nextQuestion(true));
   nextRow.append(next);
 
   feedback.append(verdictRow, meaning, origin, nextRow);
@@ -498,7 +543,7 @@ document.addEventListener('keydown', (e) => {
     const b = btns[action.index];
     if (b) answer(action.index, b);
   } else {
-    nextQuestion();
+    nextQuestion(true);
   }
 });
 
