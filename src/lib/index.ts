@@ -7,7 +7,8 @@ export {
   buildReadingQuestion,
   createRng,
   rebuildFromId,
+  scopePool,
 } from './quiz';
-export type { Question, QuestionKind } from './quiz';
+export type { OriginScope, Question, QuestionKind } from './quiz';
 export { accuracy, emptyProgress, record, restoreProgress, weakIds } from './progress';
 export type { Progress } from './progress';
