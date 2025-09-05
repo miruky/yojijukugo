@@ -7,7 +7,9 @@ import {
   buildReadingQuestion,
   createRng,
   rebuildFromId,
+  scopePool,
 } from './quiz';
+import type { Origin } from './data/idioms';
 
 describe('createRng', () => {
   it('同じシードからは同じ列を生む', () => {
@@ -97,5 +99,48 @@ describe('rebuildFromId', () => {
     expect(rebuildFromId('reading', idioms, createRng(1))).toBeUndefined();
     expect(rebuildFromId('meaning:存在しない語', idioms, createRng(1))).toBeUndefined();
     expect(rebuildFromId('walk:温故知新', idioms, createRng(1))).toBeUndefined();
+  });
+});
+
+describe('scopePool', () => {
+  const origins: Origin[] = ['kanseki', 'bukkyo', 'nihon', 'general'];
+
+  it('allは全語をそのまま返す', () => {
+    expect(scopePool(idioms, 'all')).toBe(idioms);
+  });
+
+  it('指定の由来だけに絞る', () => {
+    for (const o of origins) {
+      const scoped = scopePool(idioms, o);
+      expect(scoped.length).toBeGreaterThan(0);
+      expect(scoped.every((i) => i.origin === o)).toBe(true);
+    }
+  });
+
+  it('絞ったプールでも4択・別解非混入が崩れない', () => {
+    for (const o of origins) {
+      const pool = scopePool(idioms, o);
+      const words = new Set(pool.map((i) => i.word));
+      for (let seed = 1; seed <= 30; seed++) {
+        const rng = createRng(seed);
+        for (const kind of ['meaning', 'reading', 'fill'] as const) {
+          const q = buildQuestion(kind, pool, rng);
+          expect(q.choices).toHaveLength(4);
+          expect(new Set(q.choices).size).toBe(4);
+          expect(q.choices[q.answerIndex]).toBeDefined();
+        }
+        const fill = buildFillQuestion(pool, createRng(seed));
+        fill.choices.forEach((c, idx) => {
+          if (idx === fill.answerIndex) return;
+          expect(words.has(fill.prompt.replace('〇', c))).toBe(false);
+        });
+      }
+    }
+  });
+
+  it('4語に満たない分類は全語へ落とす', () => {
+    const tiny = idioms.slice(0, 2);
+    // tinyの中にkanseki以外しかない状況を作り、不足時に全語へ落ちることを見る
+    expect(scopePool(tiny, 'bukkyo')).toBe(tiny);
   });
 });
