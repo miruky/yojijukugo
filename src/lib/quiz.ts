@@ -2,6 +2,14 @@ import type { Idiom, Origin } from './data/idioms';
 
 export type QuestionKind = 'meaning' | 'reading' | 'fill';
 
+export const QUESTION_KINDS: readonly QuestionKind[] = ['meaning', 'reading', 'fill'];
+
+/** おまかせモード用に、3種の出題形式から一つを選ぶ。 */
+export function randomKind(rng: () => number): QuestionKind {
+  const i = Math.floor(rng() * QUESTION_KINDS.length) % QUESTION_KINDS.length;
+  return QUESTION_KINDS[i]!;
+}
+
 /** 出題範囲。由来の一分類に絞るか、全語から出すか。 */
 export type OriginScope = Origin | 'all';
 
@@ -198,4 +206,18 @@ export function rebuildFromId(
   if (kind !== 'meaning' && kind !== 'reading' && kind !== 'fill') return undefined;
   if (!idioms.some((i) => i.word === word)) return undefined;
   return buildQuestion(kind, idioms, rng, word);
+}
+
+/** 苦手リスト(問題id)を由来ごとに数える。復習タブで内訳を示すのに使う。 */
+export function weakByOrigin(
+  ids: readonly string[],
+  idioms: readonly Idiom[],
+): Record<Origin, number> {
+  const originOf = new Map(idioms.map((i) => [i.word, i.origin] as const));
+  const counts: Record<Origin, number> = { kanseki: 0, bukkyo: 0, nihon: 0, general: 0 };
+  for (const id of ids) {
+    const origin = originOf.get(id.slice(id.indexOf(':') + 1));
+    if (origin) counts[origin] += 1;
+  }
+  return counts;
 }
