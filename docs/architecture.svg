@@ -27,7 +27,7 @@
   <text class="t zl" x="36" y="44">データ (src/lib/data)</text>
   <rect class="box" x="36" y="56" width="708" height="44" rx="8"/>
   <text class="t h" x="52" y="76">idioms.ts</text>
-  <text class="t s" x="52" y="92">68語の四字熟語。読み・意味・由来分類(漢籍/仏教/日本/漢語)・出典解説</text>
+  <text class="t s" x="52" y="92">110語の四字熟語。読み・意味・由来分類(漢籍/仏教/日本/漢語)・出典解説</text>
 
   <path class="arrow" d="M390 112 V140"/>
 
