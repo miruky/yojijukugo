@@ -1,6 +1,19 @@
-import type { Idiom } from './data/idioms';
+import type { Idiom, Origin } from './data/idioms';
 
 export type QuestionKind = 'meaning' | 'reading' | 'fill';
+
+/** 出題範囲。由来の一分類に絞るか、全語から出すか。 */
+export type OriginScope = Origin | 'all';
+
+/**
+ * 出題プールを由来で絞る。4択を組めないほど小さい分類になることはないが、
+ * 万一の不足時は全語へ落とし、選択肢が欠けた問題を作らない。
+ */
+export function scopePool(idioms: readonly Idiom[], scope: OriginScope): readonly Idiom[] {
+  if (scope === 'all') return idioms;
+  const scoped = idioms.filter((i) => i.origin === scope);
+  return scoped.length >= 4 ? scoped : idioms;
+}
 
 export interface Question {
   kind: QuestionKind;
