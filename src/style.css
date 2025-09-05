@@ -12,7 +12,7 @@
   --sink: #ece7da;
   --ink: #211f1a;
   --ink-soft: #585347;
-  --ink-faint: #8a8474;
+  --ink-faint: #6f6857;
   --rule: #e3dccb;
   --rule-strong: #d2c8b2;
   /* 江戸紫を一点アクセントに */
@@ -48,7 +48,7 @@
   --sink: #221f17;
   --ink: #ece7d8;
   --ink-soft: #a8a18d;
-  --ink-faint: #797261;
+  --ink-faint: #8a8270;
   --rule: #2a2820;
   --rule-strong: #3b3829;
   --accent: #b6a7e6;
@@ -65,7 +65,7 @@
     --sink: #221f17;
     --ink: #ece7d8;
     --ink-soft: #a8a18d;
-    --ink-faint: #797261;
+    --ink-faint: #8a8270;
     --rule: #2a2820;
     --rule-strong: #3b3829;
     --accent: #b6a7e6;
@@ -920,6 +920,22 @@ button {
 /* ── レスポンシブ ── */
 
 @media (max-width: 540px) {
+  #app {
+    padding: 0 18px 48px;
+  }
+
+  .site-header {
+    padding-top: 24px;
+  }
+
+  .tabs-bar {
+    gap: 15px;
+  }
+
+  .stage {
+    padding-top: 32px;
+  }
+
   .scoreline {
     gap: 18px 22px;
   }
