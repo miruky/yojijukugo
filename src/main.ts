@@ -6,10 +6,12 @@ import {
   emptyProgress,
   idioms,
   originLabels,
+  randomKind,
   rebuildFromId,
   record,
   restoreProgress,
   scopePool,
+  weakByOrigin,
   weakIds,
 } from './lib';
 import type { Origin, OriginScope, Progress, Question, QuestionKind } from './lib';
@@ -24,15 +26,20 @@ const STORE_KEY = 'yojijukugo:progress';
 const SCOPE_KEY = 'yojijukugo:scope';
 const MASK = '〇';
 
-type Tab = QuestionKind | 'review' | 'dict';
+type Tab = QuestionKind | 'mixed' | 'review' | 'dict';
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'meaning', label: '意味' },
   { key: 'reading', label: '読み' },
   { key: 'fill', label: '虫食い' },
+  { key: 'mixed', label: 'おまかせ' },
   { key: 'review', label: '復習' },
   { key: 'dict', label: '辞典' },
 ];
+
+function isQuizTab(t: Tab): t is QuestionKind | 'mixed' {
+  return t === 'meaning' || t === 'reading' || t === 'fill' || t === 'mixed';
+}
 
 const Q_LABEL: Record<QuestionKind, string> = {
   meaning: '次の意味にあたる四字熟語は',
@@ -77,6 +84,7 @@ app.innerHTML = `
     <section class="quiz" id="quiz" role="tabpanel" aria-label="出題">
       <div class="scoreline" id="scoreline" aria-label="成績"></div>
       <div class="scope" id="scope" role="group" aria-label="出題する由来をしぼり込む"></div>
+      <div class="review-note" id="review-note" role="status" hidden></div>
       <div class="question" id="question"></div>
       <p class="kbd-hint" aria-hidden="true">1〜4キーで解答、Enterで次の問題へ</p>
     </section>
@@ -114,6 +122,7 @@ const dictList = mustFind<HTMLUListElement>('#dict-list');
 const dictCount = mustFind<HTMLSpanElement>('#dict-count');
 const dictFilters = mustFind<HTMLDivElement>('#dict-filters');
 const scopeBar = mustFind<HTMLDivElement>('#scope');
+const reviewNote = mustFind<HTMLDivElement>('#review-note');
 const themeToggle = mustFind<HTMLButtonElement>('#theme-toggle');
 const importFile = mustFind<HTMLInputElement>('#import-file');
 const srStatus = mustFind<HTMLElement>('#sr-status');
@@ -281,8 +290,16 @@ function nextQuestion(focusFirst = false): void {
     const ids = weakIds(progress);
     const id = ids[Math.floor(rng() * ids.length)];
     current = id !== undefined ? (rebuildFromId(id, idioms, rng) ?? null) : null;
-  } else if (tab !== 'dict') {
-    current = buildQuestion(tab, scopePool(idioms, quizScope), rng);
+  } else if (isQuizTab(tab)) {
+    const mode = tab;
+    const pool = scopePool(idioms, quizScope);
+    const prevId = current?.id;
+    const draw = (): ReturnType<typeof buildQuestion> =>
+      buildQuestion(mode === 'mixed' ? randomKind(rng) : mode, pool, rng);
+    // 直前と同じ問題が続けて出るのを避ける(十分な語数があるときだけ)
+    let q = draw();
+    for (let i = 0; i < 6 && pool.length > 1 && q.id === prevId; i++) q = draw();
+    current = q;
   }
   renderQuestion();
   if (focusFirst) questionBox.querySelector<HTMLElement>('.choice')?.focus();
@@ -388,6 +405,7 @@ function answer(idx: number, btn: HTMLButtonElement): void {
   persist();
   updateScore();
   renderTabs();
+  if (tab === 'review') renderReviewNote();
   announce(
     `${isCorrect ? '正解' : '不正解'}。${q.idiom.word}、${q.idiom.reading}。${q.idiom.meaning}`,
   );
@@ -559,18 +577,47 @@ function renderScope(): void {
   }
 }
 
+// 復習タブで苦手の由来内訳を一行に示す。0件のときは出さない。
+function renderReviewNote(): void {
+  reviewNote.textContent = '';
+  const counts = weakByOrigin(weakIds(progress), idioms);
+  const parts = ORIGINS.filter((o) => counts[o] > 0);
+  if (parts.length === 0) {
+    reviewNote.hidden = true;
+    return;
+  }
+  reviewNote.hidden = false;
+  const lead = document.createElement('span');
+  lead.className = 'scope-lead kicker';
+  lead.textContent = '苦手の内訳';
+  reviewNote.append(lead);
+  for (const o of parts) {
+    const item = document.createElement('span');
+    item.className = 'review-tally';
+    const label = document.createElement('span');
+    label.textContent = originLabels[o];
+    const n = document.createElement('span');
+    n.className = 'chip-count';
+    n.textContent = String(counts[o]);
+    item.append(label, n);
+    reviewNote.append(item);
+  }
+}
+
 function renderStage(): void {
   const isDict = tab === 'dict';
-  const isQuiz = tab === 'meaning' || tab === 'reading' || tab === 'fill';
+  const isQuiz = isQuizTab(tab);
   quizSection.hidden = isDict;
   dictSection.hidden = !isDict;
   scopeBar.hidden = !isQuiz;
+  reviewNote.hidden = tab !== 'review';
   if (isDict) {
     renderDictFilters();
     renderDict();
     dictSearch.focus();
   } else {
     if (isQuiz) renderScope();
+    if (tab === 'review') renderReviewNote();
     nextQuestion();
   }
 }
