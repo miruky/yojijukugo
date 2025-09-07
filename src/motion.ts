@@ -18,11 +18,22 @@ export function initMotion(): void {
 export function revealQuestion(box: HTMLElement): void {
   if (!enabled) return;
   const label = box.querySelector('.q-label');
-  const subject = box.querySelector('.kanji-frame, .prompt-text');
+  const frame = box.querySelector('.kanji-frame');
+  const prompt = box.querySelector('.prompt-text');
   const choices = box.querySelectorAll('.choice');
   const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
   if (label) tl.from(label, { opacity: 0, y: 8, duration: 0.4 }, 0);
-  if (subject) tl.from(subject, { opacity: 0, y: 12, duration: 0.55 }, 0.06);
+  if (frame) {
+    // 升目はまず枠が現れ、四字が一升ずつ収まっていく。
+    tl.from(frame, { opacity: 0, duration: 0.4 }, 0.06);
+    tl.from(
+      frame.querySelectorAll('.kanji-cell'),
+      { opacity: 0, y: 8, duration: 0.45, stagger: 0.07 },
+      0.12,
+    );
+  } else if (prompt) {
+    tl.from(prompt, { opacity: 0, y: 12, duration: 0.55 }, 0.06);
+  }
   if (choices.length) tl.from(choices, { opacity: 0, y: 10, duration: 0.45, stagger: 0.055 }, 0.16);
 }
 
