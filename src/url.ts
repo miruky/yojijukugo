@@ -1,8 +1,8 @@
 // URLのハッシュにモードと辞典の検索語を載せ、共有・ブックマークできるようにする。
 // 例: #reading 、 #dict 、 #dict/温故知新
-export type RouteTab = 'meaning' | 'reading' | 'fill' | 'review' | 'dict';
+export type RouteTab = 'meaning' | 'reading' | 'fill' | 'mixed' | 'review' | 'dict';
 
-const ROUTE_TABS: readonly RouteTab[] = ['meaning', 'reading', 'fill', 'review', 'dict'];
+const ROUTE_TABS: readonly RouteTab[] = ['meaning', 'reading', 'fill', 'mixed', 'review', 'dict'];
 
 export function isRouteTab(value: string): value is RouteTab {
   return (ROUTE_TABS as readonly string[]).includes(value);
