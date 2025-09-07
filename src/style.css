@@ -347,6 +347,27 @@ button {
   opacity: 0.65;
 }
 
+/* 復習タブの苦手内訳。範囲帯と同じリズムに揃える。 */
+.review-note {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin: -12px 0 40px;
+}
+
+.review-tally {
+  font-size: 13px;
+  letter-spacing: 0.03em;
+  color: var(--ink-soft);
+}
+
+.review-tally .chip-count {
+  font-size: 11px;
+  color: var(--seal);
+  opacity: 0.95;
+}
+
 /* ── 出題 ── */
 
 .question {
