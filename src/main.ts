@@ -9,9 +9,10 @@ import {
   rebuildFromId,
   record,
   restoreProgress,
+  scopePool,
   weakIds,
 } from './lib';
-import type { Origin, Progress, Question, QuestionKind } from './lib';
+import type { Origin, OriginScope, Progress, Question, QuestionKind } from './lib';
 import { applyTheme, loadTheme, nextTheme, THEME_LABEL } from './theme';
 import type { ThemeMode } from './theme';
 import { arrowRight, check, cross, github, logo, search } from './icons';
@@ -20,6 +21,7 @@ import { formatHash, parseHash } from './url';
 import { parseQuizKey } from './keys';
 
 const STORE_KEY = 'yojijukugo:progress';
+const SCOPE_KEY = 'yojijukugo:scope';
 const MASK = '〇';
 
 type Tab = QuestionKind | 'review' | 'dict';
@@ -74,6 +76,7 @@ app.innerHTML = `
   <main class="stage" id="stage" tabindex="-1">
     <section class="quiz" id="quiz" role="tabpanel" aria-label="出題">
       <div class="scoreline" id="scoreline" aria-label="成績"></div>
+      <div class="scope" id="scope" role="group" aria-label="出題する由来をしぼり込む"></div>
       <div class="question" id="question"></div>
       <p class="kbd-hint" aria-hidden="true">1〜4キーで解答、Enterで次の問題へ</p>
     </section>
@@ -110,6 +113,7 @@ const dictSearch = mustFind<HTMLInputElement>('#dict-search');
 const dictList = mustFind<HTMLUListElement>('#dict-list');
 const dictCount = mustFind<HTMLSpanElement>('#dict-count');
 const dictFilters = mustFind<HTMLDivElement>('#dict-filters');
+const scopeBar = mustFind<HTMLDivElement>('#scope');
 const themeToggle = mustFind<HTMLButtonElement>('#theme-toggle');
 const importFile = mustFind<HTMLInputElement>('#import-file');
 const srStatus = mustFind<HTMLElement>('#sr-status');
@@ -122,9 +126,22 @@ function announce(message: string): void {
   });
 }
 
+function loadScope(): OriginScope {
+  try {
+    const value = localStorage.getItem(SCOPE_KEY);
+    if (value === 'all' || (value !== null && ORIGINS.includes(value as Origin))) {
+      return value as OriginScope;
+    }
+  } catch {
+    // 取得できなければ全語から出題する
+  }
+  return 'all';
+}
+
 let theme: ThemeMode = loadTheme();
 let tab: Tab = 'meaning';
 let dictOrigin: Origin | 'all' = 'all';
+let quizScope: OriginScope = loadScope();
 let progress: Progress;
 try {
   progress = restoreProgress(localStorage.getItem(STORE_KEY));
@@ -140,6 +157,14 @@ function persist(): void {
     localStorage.setItem(STORE_KEY, JSON.stringify(progress));
   } catch {
     // 保存できなくても出題は続ける
+  }
+}
+
+function persistScope(): void {
+  try {
+    localStorage.setItem(SCOPE_KEY, quizScope);
+  } catch {
+    // 保存できなくても出題範囲は反映する
   }
 }
 
@@ -257,7 +282,7 @@ function nextQuestion(focusFirst = false): void {
     const id = ids[Math.floor(rng() * ids.length)];
     current = id !== undefined ? (rebuildFromId(id, idioms, rng) ?? null) : null;
   } else if (tab !== 'dict') {
-    current = buildQuestion(tab, idioms, rng);
+    current = buildQuestion(tab, scopePool(idioms, quizScope), rng);
   }
   renderQuestion();
   if (focusFirst) questionBox.querySelector<HTMLElement>('.choice')?.focus();
@@ -363,7 +388,9 @@ function answer(idx: number, btn: HTMLButtonElement): void {
   persist();
   updateScore();
   renderTabs();
-  announce(`${isCorrect ? '正解' : '不正解'}。${q.idiom.word}、${q.idiom.reading}。${q.idiom.meaning}`);
+  announce(
+    `${isCorrect ? '正解' : '不正解'}。${q.idiom.word}、${q.idiom.reading}。${q.idiom.meaning}`,
+  );
 
   const buttons = questionBox.querySelectorAll<HTMLButtonElement>('.choice');
   buttons.forEach((b, i) => {
@@ -496,15 +523,54 @@ function renderDict(): void {
   dictCount.textContent = `${hits.length}語`;
 }
 
+const SCOPE_OPTIONS: { key: OriginScope; label: string }[] = [
+  { key: 'all', label: 'すべて' },
+  ...ORIGINS.map((o) => ({ key: o, label: originLabels[o] })),
+];
+
+// 出題の由来をしぼり込む帯。各分類の収録数を添える。
+function renderScope(): void {
+  scopeBar.textContent = '';
+  const lead = document.createElement('span');
+  lead.className = 'scope-lead kicker';
+  lead.textContent = '範囲';
+  scopeBar.append(lead);
+  for (const opt of SCOPE_OPTIONS) {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'chip kicker';
+    chip.setAttribute('aria-pressed', String(quizScope === opt.key));
+    const label = document.createElement('span');
+    label.textContent = opt.label;
+    const count = document.createElement('span');
+    count.className = 'chip-count';
+    count.textContent = String(
+      opt.key === 'all' ? idioms.length : idioms.filter((i) => i.origin === opt.key).length,
+    );
+    chip.append(label, count);
+    chip.addEventListener('click', () => {
+      if (quizScope === opt.key) return;
+      quizScope = opt.key;
+      persistScope();
+      renderScope();
+      nextQuestion(true);
+    });
+    scopeBar.append(chip);
+  }
+}
+
 function renderStage(): void {
   const isDict = tab === 'dict';
+  const isQuiz = tab === 'meaning' || tab === 'reading' || tab === 'fill';
   quizSection.hidden = isDict;
   dictSection.hidden = !isDict;
+  scopeBar.hidden = !isQuiz;
   if (isDict) {
     renderDictFilters();
     renderDict();
     dictSearch.focus();
   } else {
+    if (isQuiz) renderScope();
     nextQuestion();
   }
 }
