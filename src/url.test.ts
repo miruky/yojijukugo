@@ -5,6 +5,7 @@ describe('parseHash', () => {
   it('モードだけのハッシュを読む', () => {
     expect(parseHash('#reading')).toEqual({ tab: 'reading', query: '' });
     expect(parseHash('fill')).toEqual({ tab: 'fill', query: '' });
+    expect(parseHash('#mixed')).toEqual({ tab: 'mixed', query: '' });
   });
 
   it('辞典は検索語つきで読める', () => {
@@ -50,6 +51,7 @@ describe('isRouteTab', () => {
   it('規定のモードだけを受け入れる', () => {
     expect(isRouteTab('dict')).toBe(true);
     expect(isRouteTab('meaning')).toBe(true);
+    expect(isRouteTab('mixed')).toBe(true);
     expect(isRouteTab('nope')).toBe(false);
   });
 });
