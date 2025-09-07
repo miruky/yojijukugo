@@ -6,8 +6,11 @@ export {
   buildQuestion,
   buildReadingQuestion,
   createRng,
+  QUESTION_KINDS,
+  randomKind,
   rebuildFromId,
   scopePool,
+  weakByOrigin,
 } from './quiz';
 export type { OriginScope, Question, QuestionKind } from './quiz';
 export { accuracy, emptyProgress, record, restoreProgress, weakIds } from './progress';
