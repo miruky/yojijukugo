@@ -6,8 +6,11 @@ import {
   buildQuestion,
   buildReadingQuestion,
   createRng,
+  QUESTION_KINDS,
+  randomKind,
   rebuildFromId,
   scopePool,
+  weakByOrigin,
 } from './quiz';
 import type { Origin } from './data/idioms';
 
@@ -142,5 +145,40 @@ describe('scopePool', () => {
     const tiny = idioms.slice(0, 2);
     // tinyの中にkanseki以外しかない状況を作り、不足時に全語へ落ちることを見る
     expect(scopePool(tiny, 'bukkyo')).toBe(tiny);
+  });
+});
+
+describe('randomKind', () => {
+  it('必ず3種のいずれかを返す', () => {
+    const rng = createRng(99);
+    for (let i = 0; i < 200; i++) {
+      expect(QUESTION_KINDS).toContain(randomKind(rng));
+    }
+  });
+
+  it('十分に回せば3種すべてが現れる', () => {
+    const rng = createRng(3);
+    const seen = new Set<string>();
+    for (let i = 0; i < 200; i++) seen.add(randomKind(rng));
+    expect(seen.size).toBe(3);
+  });
+});
+
+describe('weakByOrigin', () => {
+  it('苦手idを由来ごとに数える', () => {
+    // 温故知新=kanseki, 一期一会=nihon, 諸行無常=bukkyo
+    const counts = weakByOrigin(
+      ['meaning:温故知新', 'fill:温故知新', 'reading:一期一会', 'meaning:諸行無常'],
+      idioms,
+    );
+    expect(counts.kanseki).toBe(2);
+    expect(counts.nihon).toBe(1);
+    expect(counts.bukkyo).toBe(1);
+    expect(counts.general).toBe(0);
+  });
+
+  it('収録外の語や壊れたidは無視する', () => {
+    const counts = weakByOrigin(['meaning:存在しない語', 'こわれたid', ''], idioms);
+    expect(counts).toEqual({ kanseki: 0, bukkyo: 0, nihon: 0, general: 0 });
   });
 });
